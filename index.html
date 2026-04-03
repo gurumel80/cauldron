@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Alchemist's Cauldron — Creative Chaos Studios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Fondamento&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 100vw; height: 100vh;
+      font-family: 'Fondamento', cursive; 
+      background: #0d0216 url('background.png') no-repeat center center fixed;
+      background-size: cover; color: #e0d0ff;
+      overflow: hidden;
+    }
+
+    /* ════════ SETUP ════════ */
+    #setup {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: flex-start; height: 100vh;
+      padding: 2vh 1rem; gap: 1rem;
+    }
+    .title-img { max-height: 40vh; width: auto; margin-bottom: 0; }
+    h1 { font-family: 'MedievalSharp', serif; color: #b76eff; text-shadow: 0 0 20px #b76effaa; font-size: 2rem; text-align: center; }
+    
+    #count-row { display: flex; align-items: center; gap: 12px; }
+    #count-input {
+      background: #1a0b2e; border: 2px solid #b76eff; color: #fff; font-family: 'MedievalSharp';
+      padding: 8px; width: 80px; border-radius: 8px; text-align: center;
+    }
+
+    #entries { 
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; 
+      width: 100%; max-width: 600px;
+      flex: 0 1 auto; overflow-y: auto; padding: 10px;
+      border-top: 1px solid rgba(183, 110, 255, 0.2);
+      border-bottom: 1px solid rgba(183, 110, 255, 0.2);
+    }
+    #entries::-webkit-scrollbar { width: 8px; }
+    #entries::-webkit-scrollbar-thumb { background: #5d2a8c; border-radius: 4px; }
+
+    .entry-input {
+      background: rgba(26, 11, 46, 0.8); border: 1px solid #b76eff; color: #fff;
+      padding: 12px; border-radius: 8px; font-family: 'Share Tech Mono';
+      font-size: 1rem; outline: none; transition: 0.2s;
+    }
+    .entry-input:focus { border-color: #e0d0ff; box-shadow: 0 0 10px #b76eff; }
+    .entry-input::placeholder { color: #8870aa; }
+
+    /* Animated Ingredients */
+    .ingredient {
+      position: fixed; width: 120px; height: 120px;
+      background-size: contain; background-repeat: no-repeat; background-position: center;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+      font-family: 'Fondamento'; font-size: 0.9rem; color: #300;
+      pointer-events: none; z-index: 5;
+      text-align: center; font-weight: bold;
+    }
+    /* The "Location Box" for text alignment on scrolls */
+    .ingredient span {
+      display: flex; align-items: center; justify-content: center;
+      width: 80%; height: 35px; line-height: 1;
+      /* border: 1px solid rgba(255,0,0,0.3); */ /* Uncomment this to see the text location box */
+    }
+    .ingredient.type-1 span { margin-bottom: 4px; }  /* Crystal Ball: Scroll is lowest */
+    .ingredient.type-2 span { margin-bottom: 12px; } /* Potion: Scroll is slightly higher */
+    .ingredient.type-3 span { margin-bottom: 16px; } /* Hat: Scroll is a bit higher */
+
+    #teacher-panel {
+      background: #1e0533; border: 2px dashed #5d2a8c; padding: 15px;
+      border-radius: 12px; width: 100%; max-width: 500px;
+    }
+    #teacher-select {
+      width: 100%; padding: 8px; margin-top: 10px; border-radius: 5px;
+      background: #0d0216; color: #b76eff; border: 1px solid #b76eff;
+    }
+
+    .btn-go {
+      background: #b76eff; color: #fff; border: none; padding: 15px 50px;
+      font-family: 'MedievalSharp', serif;
+      font-size: 1.5rem; border-radius: 50px; cursor: pointer;
+      box-shadow: 0 5px 0 #7a3bad, 0 10px 20px #000; transition: 0.1s;
+    }
+    .btn-go:active { transform: translateY(4px); box-shadow: 0 1px 0 #7a3bad; }
+
+    /* ════════ GAME ════════ */
+    #game { display: none; height: 100vh; width: 100vw; position: relative; overflow: hidden; }
+    
+    #cauldron-container {
+      display: flex; align-items: flex-end; justify-content: center;
+      height: 100%; width: 100%; padding-bottom: 7vh;
+    }
+
+    #ingredient-shelf {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      z-index: 4;
+      width: 100%; height: 100%;
+    }
+
+    /* Cauldron Graphics */
+    #cauldron-wrap { 
+      position: relative; width: 450px; height: 400px; 
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    #cauldron {
+      width: 100%; height: auto;
+      /* Aligning to bottom ensures the "feet" stay in the same place 
+         even when the image height grows due to bubbles */
+      position: relative; z-index: 2;
+    }
+
+    /* Bubbles */
+    .bubble {
+      position: absolute;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 1rem; text-align: center;
+      pointer-events: none; z-index: 20;
+      background-size: contain; background-repeat: no-repeat; background-position: center;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    @keyframes shake {
+      0% { transform: translate(0,0); }
+      25% { transform: translate(5px, 0); }
+      50% { transform: translate(-5px, 0); }
+      75% { transform: translate(5px, 0); }
+      100% { transform: translate(0,0); }
+    }
+    .shaking { animation: shake 0.1s infinite; }
+
+    /* Controls */
+    #controls { position: absolute; top: 2vh; width: 100%; text-align: center; z-index: 10; }
+    
+    /* Winner Overlay */
+    #winner-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      z-index: 100; align-items: center; justify-content: center;
+    }
+    #winner-box {
+      background: url('scroll.png') no-repeat center;
+      background-size: contain;
+      width: 500px; height: 600px;
+      padding: 100px 60px;
+      text-align: center;
+      font-family: 'Fondamento', cursive;
+      position: relative;
+      box-shadow: 0 0 50px rgba(183, 110, 255, 0.6);
+      animation: scroll-glow 2s infinite alternate;
+    }
+    @keyframes scroll-glow {
+      from { box-shadow: 0 0 30px rgba(183, 110, 255, 0.4); }
+      to { box-shadow: 0 0 70px rgba(183, 110, 255, 0.8); }
+    }
+    .sparkle-corner {
+      position: absolute; font-size: 3rem;
+      animation: sparkle-pulse 1.5s infinite ease-in-out;
+      filter: drop-shadow(0 0 10px gold);
+    }
+    @keyframes sparkle-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.5); opacity: 1; filter: drop-shadow(0 0 20px white); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SETUP SCREEN -->
+  <div id="setup">
+    <img src="title.png" alt="Witches Brew" class="title-img">
+    
+    <div id="count-row">
+      <label>INGREDIENTS (NAMES):</label>
+      <input id="count-input" type="number" min="2" max="20" value="6">
+    </div>
+
+    <div id="entries"></div>
+
+    <div id="teacher-panel">
+      <label style="cursor:pointer; user-select:none;">
+        <input type="checkbox" id="teacher-check" onchange="toggleTeacher()"> 
+        ✨ Master's Intuition (Teacher Mode)
+      </label>
+      <div id="teacher-select-row" style="display:none;">
+        <select id="teacher-select"></select>
+      </div>
+    </div>
+
+    <button class="btn-go" onclick="initGame()">BREW POTION</button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game">
+    <div id="cauldron-container">
+      <div id="cauldron-wrap">
+        <img src="cauldronempty.png" id="cauldron" alt="Cauldron">
+      </div>
+      <div id="ingredient-shelf"></div>
+    </div>
+    
+    <div id="controls">
+      <button class="btn-go" id="brew-btn" onclick="startBrewing()">BREW MAGIC</button>
+      <button onclick="location.reload()" style="background:none; border:none; color:#8870aa; cursor:pointer; display:block; margin: 20px auto;">↩ BACK TO SETUP</button>
+    </div>
+  </div>
+
+  <!-- WINNER OVERLAY -->
+  <div id="winner-overlay" onclick="closeWinner()">
+    <div id="winner-box">
+      <div class="sparkle-corner" style="top: 20px; left: 40px;">✨</div>
+      <div class="sparkle-corner" style="bottom: 40px; right: 40px; animation-delay: 0.7s;">✨</div>
+      <div style="font-size: 5rem; margin-bottom: 10px;">✨</div>
+      <h2 style="letter-spacing: 2px; color: #8870aa;">THE SUMMONED IS...</h2>
+      <h1 id="winner-name" style="font-size: 3rem; margin: 20px 0; color: #4a004a; font-family: 'MedievalSharp';"></h1>
+      <button class="btn-go" onclick="closeWinner()">ANOTHER BREW</button>
+    </div>
+  </div>
+
+  <script>
+    let names = [];
+    let isBrewing = false;
+    let audioCtx = null;
+    
+    const cauldronColors = ['blue', 'green', 'purple', 'pink'];
+    let currentColor = 'purple';
+
+    // --- Init ---
+    document.getElementById('count-input').addEventListener('change', buildInputs);
+    buildInputs();
+
+    function buildInputs() {
+      const n = document.getElementById('count-input').value;
+      const wrap = document.getElementById('entries');
+      const currentVals = Array.from(document.querySelectorAll('.entry-input')).map(i => i.value);
+      wrap.innerHTML = '';
+      for(let i=0; i<n; i++) {
+        const inp = document.createElement('input');
+        inp.className = 'entry-input';
+        inp.placeholder = `...`;
+        if(currentVals[i]) inp.value = currentVals[i];
+        inp.oninput = updateTeacherList;
+        wrap.appendChild(inp);
+      }
+    }
+
+    function toggleTeacher() {
+      const isChecked = document.getElementById('teacher-check').checked;
+      document.getElementById('teacher-select-row').style.display = isChecked ? 'block' : 'none';
+      updateTeacherList();
+    }
+
+    function updateTeacherList() {
+      const sel = document.getElementById('teacher-select');
+      const currentInputs = Array.from(document.querySelectorAll('.entry-input')).map(i => i.value).filter(Boolean);
+      sel.innerHTML = '<option value="">— Random —</option>';
+      currentInputs.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n; opt.textContent = n;
+        sel.appendChild(opt);
+      });
+    }
+
+    function initGame() {
+      names = Array.from(document.querySelectorAll('.entry-input')).map(i => i.value).filter(Boolean);
+      if(names.length < 2) return alert("Add more ingredients!");
+      document.getElementById('setup').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      
+      // Populate the shelf
+      const shelf = document.getElementById('ingredient-shelf');
+      shelf.innerHTML = '';
+
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const half = Math.ceil(names.length / 2);
+
+      names.forEach((name, i) => {
+        const el = document.createElement('div');
+        const type = (i % 3) + 1;
+        
+        const isLeft = i < half;
+        const sideIndex = isLeft ? i : i - half;
+        const sideCount = isLeft ? half : names.length - half;
+        
+        const startY = vh * 0.15;
+        const endY = vh * 0.85;
+        const stepY = sideCount > 1 ? (endY - startY) / (sideCount - 1) : 0;
+        const y = startY + (sideIndex * stepY);
+        
+        const curve = Math.sin((sideIndex / (sideCount - 1 || 1)) * Math.PI) * 70;
+        const x = isLeft ? (vw * 0.05 + curve) : (vw * 0.95 - 120 - curve);
+        
+        el.className = `ingredient type-${type}`;
+        el.id = `ing-${i}`;
+        el.style.backgroundImage = `url('name${type}.png')`;
+        el.innerHTML = `<span>${name}</span>`;
+        
+        el.style.left = x + 'px';
+        el.style.top = (y - 60) + 'px';
+        
+        shelf.appendChild(el);
+      });
+    }
+
+    // --- Magical Logic ---
+    async function startBrewing() {
+      if(isBrewing) return;
+      isBrewing = true;
+      document.getElementById('brew-btn').disabled = true;
+      
+      const cauldronWrap = document.getElementById('cauldron-wrap');
+      const cauldronImg = document.getElementById('cauldron');
+      
+      // Start with empty cauldron for the tossing phase
+      cauldronImg.src = 'cauldronempty.png';
+
+      // 1. Throw items in one by one
+      for(let i=0; i<names.length; i++) {
+        await throwIngredient(i);
+        await new Promise(r => setTimeout(r, 200)); // Short pause between throws
+      }
+
+      cauldronWrap.classList.add('shaking');
+      
+      let duration = 4000;
+      let start = Date.now();
+      
+      let forced = document.getElementById('teacher-select').value;
+      let winner = forced || names[Math.floor(Math.random() * names.length)];
+
+      const interval = setInterval(() => {
+        let elapsed = Date.now() - start;
+        let progress = elapsed / duration;
+        
+        // Play a wet, bubbling sound effect for the boil
+        if (Math.random() > 0.4) playBoilSound();
+
+        // Cycle cauldron colors
+        const colorIndex = Math.floor(Math.random() * cauldronColors.length);
+        currentColor = cauldronColors[colorIndex];
+        cauldronImg.src = `cauldron${currentColor}.png`;
+        
+        // Spawn small bubbles
+        if(Math.random() > 0.8) spawnBubble(names[Math.floor(Math.random()*names.length)], false);
+        
+        if(progress >= 1) {
+          clearInterval(interval);
+          cauldronWrap.classList.remove('shaking');
+          cauldronImg.src = 'cauldronfull.png';
+          spawnBubble(winner, true); // The Final Big Bubble
+        }
+      }, 100);
+    }
+
+    function throwIngredient(idx) {
+      return new Promise(resolve => {
+        const el = document.getElementById(`ing-${idx}`);
+        const rect = el.getBoundingClientRect();
+        
+        const startX = rect.left;
+        const startY = rect.top;
+        
+        // Target mouth of the cauldron
+        const cauldronRect = document.getElementById('cauldron-wrap').getBoundingClientRect();
+        const targetX = cauldronRect.left + cauldronRect.width / 2 - 70;
+        const targetY = cauldronRect.top + 40;
+        
+        const duration = 1200; // Slower toss
+        const start = Date.now();
+        
+        el.style.zIndex = "1000"; // Bump up while flying
+
+        function frame() {
+          const now = Date.now();
+          const p = (now - start) / duration;
+          
+          if(p >= 1) {
+            el.remove();
+            playGlugSound();
+            resolve();
+            return;
+          }
+          
+          // Curved "throw" path + shrink perspective
+          const currX = startX + (targetX - startX) * p;
+          const currY = startY + (targetY - startY) * p - Math.sin(p * Math.PI) * 200;
+          const scale = 1.0 - (p * 0.7);
+          
+          el.style.left = currX + 'px';
+          el.style.top = currY + 'px';
+          el.style.transform = `scale(${scale}) rotate(${p * 90}deg)`;
+          
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    function spawnBubble(text, isFinal) {
+      const color = isFinal ? 'purple' : currentColor;
+      const bubbleVar = Math.floor(Math.random() * 3) + 1;
+      const bubbleImg = `bubbles${color}${bubbleVar}.png`;
+
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      b.textContent = text;
+      b.style.backgroundImage = `url('${bubbleImg}')`;
+      
+      const size = isFinal ? 220 : 100 + Math.random() * 60;
+      b.style.width = size + 'px';
+      b.style.height = size + 'px';
+      if(isFinal) b.style.fontSize = "1.8rem";
+
+      // Position at cauldron mouth (relative to the base)
+      const anchor = document.getElementById('cauldron-wrap');
+      const rect = anchor.getBoundingClientRect();
+      b.style.left = (rect.left + rect.width/2 - size/2) + 'px';
+      // Always spawn from the lip area, regardless of total image height
+      b.style.top = (rect.bottom - 180) + 'px'; 
+      
+      document.body.appendChild(b);
+      playPopSound(isFinal ? 440 : 880);
+
+      // Animation
+      let startY = rect.top + 20;
+      let targetY = startY - (isFinal ? 200 : 300 + Math.random() * 200);
+      let startTime = Date.now();
+      let animDur = isFinal ? 2500 : 2000 + Math.random() * 1500; // Slower bubbles
+
+      function move() {
+        let elap = Date.now() - startTime;
+        let p = elap / animDur;
+        b.style.top = (startY - (startY - targetY) * p) + 'px';
+        b.style.opacity = isFinal ? 1 : 1 - (p * 0.8);
+        
+        if(p < 1) {
+          requestAnimationFrame(move);
+        } else {
+          b.remove();
+          if(isFinal) {
+            showWinner(text);
+            isBrewing = false;
+            document.getElementById('brew-btn').disabled = false;
+          }
+        }
+      }
+      requestAnimationFrame(move);
+    }
+
+    // --- Audio & UI ---
+    function playSparkleSound() {
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      const notes = [
+        { freq: 523.25, duration: 0.15 }, // C5
+        { freq: 659.25, duration: 0.15 }, // E5
+        { freq: 783.99, duration: 0.2 },  // G5
+        { freq: 1046.50, duration: 0.3 }  // C6
+      ];
+      
+      let currentTime = audioCtx.currentTime;
+      notes.forEach((note, index) => {
+        const startTime = currentTime + (index * 0.1); // Stagger notes slightly
+        const endTime = startTime + note.duration;
+
+        // Main note
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(note.freq, startTime);
+        gain1.gain.setValueAtTime(0, startTime);
+        gain1.gain.linearRampToValueAtTime(0.1, startTime + 0.02);
+        gain1.gain.exponentialRampToValueAtTime(0.001, endTime);
+        osc1.connect(gain1); gain1.connect(audioCtx.destination);
+        osc1.start(startTime); osc1.stop(endTime);
+
+        // Higher harmonic for sparkle effect
+        if (index === notes.length - 1) { // Only for the final, sustained note
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(note.freq * 2, startTime); // Octave higher
+          gain.gain.setValueAtTime(0, startTime);
+          gain.gain.linearRampToValueAtTime(0.03, startTime + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, endTime + 0.1); // Slightly longer tail
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(startTime); osc.stop(endTime + 0.1);
+        }
+      });
+    }
+
+    function playBoilSound() {
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      // Low-frequency sine sweep for a deep "bloop" sound
+      const baseFreq = 100 + Math.random() * 80;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.1, audioCtx.currentTime + 0.25);
+      
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    }
+
+    function playGlugSound() {
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    }
+
+    function playPopSound(freq) {
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(freq/2, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    function showWinner(name) {
+      document.getElementById('winner-name').textContent = name;
+      document.getElementById('winner-overlay').style.display = 'flex';
+      playSparkleSound();
+    }
+
+    function closeWinner() {
+      document.getElementById('winner-overlay').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
